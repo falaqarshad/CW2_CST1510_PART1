@@ -63,3 +63,23 @@ conn.commit()
 conn.close()
 
 print("✅ Database schema created successfully")
+
+import sqlite3
+
+conn = sqlite3.connect("database/platform.db")
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS security_incidents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    incident_type TEXT,
+    severity TEXT,
+    status TEXT,
+    description TEXT
+)
+""")
+
+conn.commit()
+conn.close()
+
+print("✅ security_incidents table created")

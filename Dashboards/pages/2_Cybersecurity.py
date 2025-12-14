@@ -2,58 +2,43 @@ import streamlit as st
 from services.database_manager import DatabaseManager
 from models.security_incident import SecurityIncident
 
-st.title("🛡️ Cybersecurity Incidents")
+st.title("🛡️ Cybersecurity Dashboard")
 
-# Connect to DB
 db = DatabaseManager("database/platform.db")
-db.connect()
-
 rows = db.fetch_all("""
-    SELECT id, incident_type, severity, status, description
-    FROM cyber_incidents
+SELECT id, incident_type, severity, status, description
+FROM security_incidents
 """)
 
 incidents = [
     SecurityIncident(*row) for row in rows
 ]
 
-# ---- DISPLAY INCIDENTS ----
-if not incidents:
-    st.info("No incidents found.")
-else:
-    for incident in incidents:
-        with st.expander(str(incident)):
-            st.write("Incident Type:", incident.get_incident_type())
-            st.write("Severity:", incident.get_severity())
-            st.write("Status:", incident.get_status())
-            st.write("Description:", incident.get_description())
+# KPI
+open_count = sum(1 for i in incidents if i.get_status() == "Open")
+resolved_count = sum(1 for i in incidents if i.get_status() == "Resolved")
+phishing_count = sum(1 for i in incidents if i.get_incident_type() == "Phishing")
 
-# ---- ANALYSIS (PART 1 REQUIREMENT) ----
-st.divider()
-st.subheader("📊 Incident Analysis")
+st.metric("Open Incidents", open_count)
+st.metric("Resolved Incidents", resolved_count)
+st.metric("Phishing Incidents", phishing_count)
 
-phishing_count = sum(
-    1 for i in incidents if i.get_incident_type().lower() == "phishing"
+st.subheader("Incident List")
+for i in incidents:
+    st.write(i)
+
+    import pandas as pd
+
+st.subheader("Incident Status Overview")
+
+status_data = {
+    "Open": open_count,
+    "Resolved": resolved_count
+}
+
+df = pd.DataFrame(
+    list(status_data.items()),
+    columns=["Status", "Count"]
 )
 
-severity_count = {}
-for i in incidents:
-    severity_count[i.get_severity()] = severity_count.get(i.get_severity(), 0) + 1
-
-st.metric("Phishing Incidents", phishing_count)
-st.bar_chart(severity_count)
-
-st.subheader("⏱️ Response Bottleneck")
-
-status_count = {}
-for i in incidents:
-    status_count[i.get_status()] = status_count.get(i.get_status(), 0) + 1
-
-st.bar_chart(status_count)
-
-worst_status = max(status_count, key=status_count.get)
-st.warning(f"Biggest bottleneck: {worst_status}")
-
-phishing_count = sum(1 for i in incidents if i.type == "Phishing")
-st.metric("Phishing Incidents", phishing_count)
-st.warning("Phishing incidents dominate the backlog → response bottleneck")
+st.bar_chart(df.set_index("Status"))
